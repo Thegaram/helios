@@ -3,8 +3,8 @@ import PropTypes from 'prop-types'
 import {useState, useEffect} from 'react'
 import {useTranslation} from 'react-i18next'
 import dayjs from 'dayjs'
+import {isUndefined} from '@fluent-wallet/checks'
 import {
-  CFX_DECIMALS,
   convertDataToValue,
   formatHexToDecimal,
 } from '@fluent-wallet/data-format'
@@ -15,7 +15,7 @@ import {
   SendOutlined,
 } from '@fluent-wallet/component-icons'
 import {transformToTitleCase, formatStatus} from '../../../utils'
-import {useNetworkTypeIsCfx} from '../../../hooks/useApi'
+import {useNetworkTypeIsCfx, useCurrentTicker} from '../../../hooks/useApi'
 import {useDecodeData} from '../../../hooks'
 import {
   WrapIcon,
@@ -64,6 +64,12 @@ function HistoryItem({
   const [symbol, setSymbol] = useState('')
   const [toAddress, setToAddress] = useState('')
   const {t} = useTranslation()
+  const {
+    symbol: tokenSymbol,
+    name: tokenName,
+    decimals: tokenDecimals,
+  } = useCurrentTicker()
+
   const networkTypeIsCfx = useNetworkTypeIsCfx()
 
   const txStatus = formatStatus(status)
@@ -85,8 +91,8 @@ function HistoryItem({
   }, [simple, Object.keys(decodeData).length])
 
   useEffect(() => {
-    if (simple) {
-      return setContractName(networkTypeIsCfx ? 'CFX' : 'Ether')
+    if (simple && tokenName) {
+      return setContractName(tokenName)
     }
     if (contractCreation) {
       return setContractName(t('contractCreation'))
@@ -98,6 +104,7 @@ function HistoryItem({
       setContractName(t('contractInteraction'))
     }
   }, [
+    tokenName,
     simple,
     token20,
     Boolean(token),
@@ -108,10 +115,10 @@ function HistoryItem({
   ])
 
   useEffect(() => {
-    if (simple) {
-      setSymbol(networkTypeIsCfx ? 'CFX' : 'ETH')
+    if (simple && tokenSymbol && !isUndefined(tokenDecimals)) {
+      setSymbol(tokenSymbol)
       setToAddress(payload?.to ?? '')
-      setAmount(convertDataToValue(payload?.value, CFX_DECIMALS) ?? '')
+      setAmount(convertDataToValue(payload?.value, tokenDecimals) ?? '')
       return
     }
     if (token20 && token) {
@@ -134,6 +141,8 @@ function HistoryItem({
     }
   }, [
     Boolean(token),
+    tokenSymbol,
+    tokenDecimals,
     simple,
     token20,
     contractInteraction,
